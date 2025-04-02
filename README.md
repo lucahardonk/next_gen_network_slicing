@@ -79,7 +79,7 @@ Project Components:
 
 
 
-Project structure
+Project structure:
 
 
 next_gen_sdn_project/
