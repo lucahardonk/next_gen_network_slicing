@@ -78,7 +78,7 @@ Project Components:
             Impact on throughput and congestion.
 
 
-
+```text
 Project structure:
 
 
@@ -134,3 +134,4 @@ next_gen_sdn_project/
 └── README.md                    # Project documentation
                                  # - Explains project goals, usage instructions
                                  # - How to run tests, allocate flows, and interpret results
+```
