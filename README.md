@@ -95,7 +95,7 @@ next_gen_sdn_project/
 │
 ├── visualize_topology.py        # Network visualization tool
 |                                # - GUI to visulize the network layout and link capacities                               
-│
+│                                # - Updates visual representation of the network
 |
 ├── allocate_resources.py        # Smart allocator
 │                                # - Allocates flows using Dijkstra or k-Yen’s algorithm
@@ -106,7 +106,7 @@ next_gen_sdn_project/
 │                                # - Allocates all flows regardless of capacity
 │                                # - Used to simulate network congestion scenarios
 │
-├── update_gui.py                # GUI updater (or main GUI module)
+├── visualize_topology.py        # GUI updater (or main GUI module)
 │                                # - Updates visual representation of the network
 │                                # - Shows flow results if sucessful
 │                                
