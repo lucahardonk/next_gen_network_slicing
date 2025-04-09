@@ -96,11 +96,13 @@ next_gen_sdn_project/
 ├── visualize_topology.py        # Network visualization tool
 |                                # - GUI to visulize the network layout and link capacities                               
 │                                # - Updates visual representation of the network
+|                                # - create a standalone thread that every second checks if the file has changed "running_topology.csv", if so it updates the gui
 |
 ├── allocate_resources.py        # Smart allocator
 │                                # - Allocates flows using Dijkstra or k-Yen’s algorithm
 │                                # - Checks for residual capacity along the path if using Yen
 │                                # - Updates link residuals upon success
+│                                # - Shows flow results if sucessful
 │
 ├── always_allocate_resources.py # Naive allocator
 │                                # - Allocates all flows regardless of capacity
@@ -108,7 +110,6 @@ next_gen_sdn_project/
 │
 ├── visualize_topology.py        # GUI updater (or main GUI module)
 │                                # - Updates visual representation of the network
-│                                # - Shows flow results if sucessful
 │                                
 │
 ├── run_iperf_tests.py           # Iperf automation script

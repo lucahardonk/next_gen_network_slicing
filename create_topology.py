@@ -45,34 +45,44 @@ def load_from_csv(input_path, running_path):
 
 def create_random_network(running_path):
     print("Creating a random network...")
+
+    # Maximum number of switches and hosts
+    NUM_SWITCHES = 6
+    NUM_HOSTS = 5
+
     topo = Topo()
+    link_list = []  # List to store all links for later CSV saving
 
-    switches = [topo.addSwitch(f"s{i+1}") for i in range(3)]
+    # Create switches
+    switches = [topo.addSwitch(f"s{i+1}") for i in range(NUM_SWITCHES)]
+
+    # Create hosts and connect each to a random switch
     hosts = []
-
-    for i in range(5):
+    for i in range(NUM_HOSTS):
         host = topo.addHost(f"h{i+1}")
         hosts.append(host)
         sw = random.choice(switches)
         bw = random.randint(10, 100)
         topo.addLink(host, sw, bw=bw)
+        link_list.append((host, sw, bw))
 
+    # Fully mesh the switches
     for i in range(len(switches)):
         for j in range(i + 1, len(switches)):
-            topo.addLink(switches[i], switches[j], bw=random.randint(50, 500))
+            bw = random.randint(50, 500)
+            topo.addLink(switches[i], switches[j], bw=bw)
+            link_list.append((switches[i], switches[j], bw))
 
-    # Save random topology to CSV
+    # Save the generated topology to CSV
     with open(running_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        for host in hosts:
-            sw = random.choice(switches)
-            bw = random.randint(10, 100)
-            writer.writerow([host, sw, bw])
-        for i in range(len(switches)):
-            for j in range(i + 1, len(switches)):
-                writer.writerow([switches[i], switches[j], random.randint(50, 500)])
+        for link in link_list:
+            writer.writerow(link)
 
+    # Launch the Mininet network
     run_mininet(topo)
+
+
 
 def run_mininet(topo):
     setLogLevel('info')
