@@ -99,8 +99,8 @@ next_gen_sdn_project/
 |                                # - create a standalone thread that every second checks if the file has changed "running_topology.csv", if so it updates the gui
 |
 ├── allocate_resources.py        # Smart allocator
-│                                # - Allocates flows using Dijkstra or k-Yen’s algorithm
-│                                # - Checks for residual capacity along the path if using Yen
+│                                # - Allocates flows using k-Yen’s algorithm
+│                                # - Checks for residual capacity along the proposed paths, choose the one that creates less segmentation
 │                                # - Updates link residuals upon success
 │                                # - Shows flow results if sucessful
 │
