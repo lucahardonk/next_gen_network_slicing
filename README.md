@@ -129,7 +129,8 @@ next_gen_sdn_project/
 │
 ├── data/                        # Static and runtime data
 │   ├── topology.csv             # - Node/link definitions with capacities
-│   ├── flows.csv                # - List of flow requests (source, destination, bandwidth)
+│   ├── running_network.csv      # - current total bandwith for each link
+|   |-- flow_request.csv         # - keep track of the calculated bandwith to allocate to undo also
 │   └── iperf_results.csv        # - Collected iperf test results for analysis
 │
 └── README.md                    # Project documentation
