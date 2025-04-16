@@ -4,7 +4,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
-
+import threading
+import time
+import warnings
+# just beacuse we are running matplotlip as background process triggers a warning but can be safely ignore it
+warnings.filterwarnings("ignore", message=".*Matplotlib GUI outside of the main thread.*")
 
 CSV_PATH = '/home/vagrant/next_gen_network_slicing/data/running_network.csv'
 
@@ -93,7 +97,10 @@ def compute_node_positions(G):
 # 🖼️ VISUALIZATION
 # =====================
 def draw_topology(G, pos):
-    """Draw the network topology with nodes, edges, and bandwidth labels"""
+    """Draw the network topology with nodes, edges, and bandwidth labels using a persistent window"""
+    plt.ion()  # Turn on interactive mode
+    plt.clf()  # Clear the current figure
+
     switches, hosts = get_switch_and_host_nodes(G)
     node_colors = ['skyblue' if n in switches else 'lightgreen' for n in G.nodes()]
 
@@ -103,23 +110,21 @@ def draw_topology(G, pos):
     edge_colors = [cmap(i) for i in range(len(edges))]
     edge_color_map = {edge: color for edge, color in zip(edges, edge_colors)}
 
-    plt.figure(figsize=(12, 8))
-
     # Draw edges individually with their color
     for (edge, color) in edge_color_map.items():
         nx.draw_networkx_edges(G, pos, edgelist=[edge], edge_color=[color], width=2)
 
-    # Draw nodes
+    # Draw nodes and labels
     nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=1400)
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
 
-    # Draw bandwidth labels with matching edge color
     draw_edge_bandwidth_labels(G, pos, edge_color_map=edge_color_map)
 
     plt.title("SDN Topology with Unique Link Colors", fontsize=16)
     plt.axis('off')
     plt.tight_layout()
-    plt.show()
+    plt.pause(0.001)  # Allow matplotlib to update the figure
+
 
 
 
@@ -160,6 +165,26 @@ def draw_edge_bandwidth_labels(G, pos, offset_amount=0.2, edge_color_map=None):
             bbox=dict(facecolor='white', edgecolor=color, boxstyle='round,pad=0.2', alpha=0.8)
         )
 
+
+# =====================
+# 🎬 MULTY THREADING
+# =====================
+
+
+def live_visualizer(csv_path, refresh_interval=1):
+    while True:
+        G = load_topology_from_csv(csv_path)
+        pos = compute_node_positions(G)
+        draw_topology(G, pos)
+        time.sleep(refresh_interval)
+
+def start_visualization_thread(csv_path, refresh_interval=1):
+    thread = threading.Thread(
+        target=live_visualizer,
+        args=(csv_path, refresh_interval),
+        daemon=True  # Ensures thread dies when main program ends
+    )
+    thread.start()
 
 
 # =====================
