@@ -12,6 +12,7 @@ import networkx as nx
 INITIAL_PATH = 'data/initial_topology.csv'
 RUNNING_PATH = 'data/running_network.csv'
 ALLOCATED_FLOW_PATH = 'data/allocated_flow.csv'
+BASE_PORT = 5001
 
 
 def load_graph_from_csv(path):
@@ -76,6 +77,46 @@ def allocate_flow(csv_path, path_str, bandwidth):
             a, b = list(edge)
             writer.writerow([a, b, bw])
 
+
+def assign_tunnel_id(csv_file_path):
+    if not os.path.exists(csv_file_path):
+        return 1  # Start from 1 if file doesn't exist
+
+    with open(csv_file_path, 'r') as f:
+        reader = list(csv.reader(f))
+        if not reader:
+            return 1  # Start from 1 if file is empty
+
+        last_row = reader[-1]
+        if not last_row:
+            return 1  # Handle case where last row is empty
+
+        try:
+            last_id = int(last_row[-2])  # Corrected: tunnel_id is second-to-last
+            return last_id + 1
+        except ValueError:
+            raise ValueError(f"Invalid tunnel ID in file: {last_row[-2]}")
+
+def setup_queues_for_path(net, path_nodes, bandwidth, queue_id):
+    for u, v in zip(path_nodes[:-1], path_nodes[1:]):
+        if u.startswith('s') and v.startswith('s'):
+            node_u = net.get(u)
+            node_v = net.get(v)
+
+            # Find interfaces connecting u <-> v
+            for intf in node_u.intfList():
+                if intf.link and intf.link.intf1 and intf.link.intf2:
+                    peer = intf.link.intf1 if intf.link.intf2.node == node_u else intf.link.intf2
+                    if peer.node == node_v:
+                        intf_name = intf.name
+                        # Set up HTB qdisc and queue class
+                        print(f"🛠️ Setting up queue on {u}:{intf_name} for queue {queue_id} @ {bandwidth} Mbps")
+                        node_u.cmd(f"tc qdisc add dev {intf_name} root handle 1: htb default 10")
+                        node_u.cmd(f"tc class add dev {intf_name} parent 1: classid 1:{queue_id} htb rate {bandwidth}mbit")
+
+
+
+
 def main():
     user_input = input("Press 'r' to create a random network or insert the path to a CSV file: ").strip()
 
@@ -88,15 +129,17 @@ def main():
         return
 
     shutil.copyfile(INITIAL_PATH, RUNNING_PATH)
-
+    # Clear any previous flow allocations
+    open(ALLOCATED_FLOW_PATH, 'w').close()
 
     # launch ryu controller
     print("Starting Ryu controller with stp...")
-    os.system("gnome-terminal -- bash -c 'cd /home/vagrant/comnetsemu_dependencies/ryu-v4.34/ryu/ryu/app && ryu-manager simple_switch_stp_13.py; exec bash'")
+    os.system("gnome-terminal -- bash -c 'cd ~/next_gen_network_slicing && ryu-manager simple_switch_stp_13_next_gen.py; exec bash'")
     time.sleep(3)
     #launch mininet from another script
     print("Launching Mininet...")
     os.system("gnome-terminal -- bash -c 'sudo python3 mininet_runner.py; exec bash'")
+
 
     # Initial visualization (blocking until closed)
     visualize_network_once_standalone(INITIAL_PATH)
@@ -136,19 +179,30 @@ def main():
                 best_path, min_segmentation = least_segmentation(G, paths, allocation_bandwidth)
                 print(f"\nBest path by least segmentation: {best_path}, Minimum Segmentation: {min_segmentation}")
 
-                # Save the allocated flow
+                # Step A: Get the next Tunnel ID
+                tunnel_id = assign_tunnel_id(ALLOCATED_FLOW_PATH)
+
+                # Step B: Assign a TCP port based on tunnel ID
+                tcp_port = BASE_PORT + tunnel_id
+
+                # Step C: Save the allocated flow with port
                 with open(ALLOCATED_FLOW_PATH, 'a') as f:
                     path_str = ','.join(best_path)
-                    f.write(f"{path_str},{int(allocation_bandwidth)}\n")
+                    f.write(f"{path_str},{int(allocation_bandwidth)},{tunnel_id},{tcp_port}\n")
 
-                # Update the running network
+
+                # Step D: Update the running network
                 allocate_flow(RUNNING_PATH, path_str, allocation_bandwidth)
 
-                # Reload graph with updated values
+                # Step E: Reload graph with updated values
                 G = load_graph_from_csv(RUNNING_PATH)
+
+                
+
 
             except ValueError as e:
                 print(e)
+
 
         elif choice == '2':  # Deallocate
             print("\nDeallocating a flow from previously allocated list...")
@@ -169,11 +223,16 @@ def main():
                     print("Invalid index.")
                     continue
 
-                # Get the selected flow
+                # Get the selected flow line and parse its parts
                 flow_line = lines[index].strip()
-                *path_nodes, bandwidth = flow_line.split(',')
+                parts = flow_line.split(',')
+
+                # Last 3 parts are: bandwidth, tunnel_id, tcp_port
+                bandwidth = int(parts[-3])
+                tunnel_id = int(parts[-2])
+                tcp_port = int(parts[-1])
+                path_nodes = parts[:-3]
                 path_str = ','.join(path_nodes)
-                bandwidth = int(bandwidth)
 
                 # Revert the bandwidth
                 allocate_flow(RUNNING_PATH, path_str, -bandwidth)  # Re-add bandwidth
@@ -190,6 +249,7 @@ def main():
 
             except Exception as e:
                 print(f"Error during deallocation: {e}")
+
 
         elif choice == '3':  # Exit
             print("Exiting...")
