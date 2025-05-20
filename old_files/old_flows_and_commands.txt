@@ -1,0 +1,81 @@
+[
+    {
+      "src_ip": "10.0.0.1",
+      "dst_ip": "10.0.0.2",
+      "src_mac": "00:00:00:00:00:01",
+      "dst_mac": "00:00:00:00:00:02",
+      "tcp_port": 5005,
+      "rate": 10,
+      "path": ["s1", "s3", "s2"],
+      "out_ports": { "s1": 3, "s3": 3, "s2": 1 },
+      "in_ports":  { "s2": 3, "s3": 2, "s1": 1 },
+      "links": [["h1", "s1"], ["s1", "s3"], ["s3", "s2"], ["s2", "h2"]]
+    },
+    {
+      "src_ip": "10.0.0.2",
+      "dst_ip": "10.0.0.1",
+      "src_mac": "00:00:00:00:00:02",
+      "dst_mac": "00:00:00:00:00:01",
+      "tcp_port": 5005,
+      "rate": 10,
+      "path": ["s2", "s3", "s1"],
+      "out_ports": { "s2": 3, "s3": 2, "s1": 1 },
+      "in_ports":  { "s1": 3, "s3": 3, "s2": 1 },
+      "links": [["h2", "s2"], ["s2", "s3"], ["s3", "s1"], ["s1", "h1"]]
+    },
+    {
+        "src_ip": "10.0.0.1",
+        "dst_ip": "10.0.0.3",
+        "src_mac": "00:00:00:00:00:01",
+        "dst_mac": "00:00:00:00:00:03",
+        "tcp_port": 5006,
+        "rate": 20,
+        "path": ["s1", "s2", "s4", "s3"],
+        "out_ports": { "s1": 2, "s2": 4, "s4": 3, "s3": 1 },
+        "in_ports":  { "s3": 4, "s4": 2, "s2": 2, "s1": 1 },
+        "links": [["h1", "s1"], ["s1", "s2"], ["s2", "s4"], ["s4", "s3"], ["s3", "h3"]]
+      },
+      {
+        "src_ip": "10.0.0.3",
+        "dst_ip": "10.0.0.1",
+        "src_mac": "00:00:00:00:00:03",
+        "dst_mac": "00:00:00:00:00:01",
+        "tcp_port": 5006,
+        "rate": 20,
+        "path": ["s3", "s4", "s2", "s1"],
+        "out_ports": { "s3": 4, "s4": 2, "s2": 2, "s1": 1 },
+        "in_ports":  { "s1": 2, "s2": 4, "s4": 3, "s3": 1 },
+        "links": [["h3", "s3"], ["s3", "s4"], ["s4", "s2"], ["s2", "s1"], ["s1", "h1"]]
+      }
+  ]
+
+
+#flow alocation
+  
+curl -X POST http://localhost:5000/flow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "add",
+    "path": ["h1", "s1", "s2", "s4", "s3", "h3"],
+    "tcp_port": 5009,
+    "rate": 25,
+    "bidirectional": true
+  }'
+
+curl -X POST http://localhost:5000/flow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "delete",
+    "path": ["h1", "s1", "s2", "s4", "s3", "h3"],
+    "tcp_port": 5009,
+    "rate": 25,
+    "bidirectional": true
+  }'
+
+# Forward
+h3 iperf -s -p 5009 &
+h1 iperf -c 10.0.0.3 -p 5009 -t 10
+
+# Reverse
+h1 iperf -s -p 5009 &
+h3 iperf -c 10.0.0.1 -p 5009 -t 10
