@@ -27,25 +27,7 @@ This handles flow slicing, tunnel setup, and dynamic path installation.
 
 ---
 
-### 🔹 Terminal 3 – Visualize Initial Topology
-```bash
-python3 visualize_initial_topology.py
-```
-
-This shows the topology as defined in `initial_topology.csv`.
-
----
-
-### 🔹 Terminal 4 – Visualize Running Topology
-```bash
-python3 visualize_running_topology.py
-```
-
-This updates dynamically based on `running_network.csv`.
-
----
-
-### 🧠 (Optional) Terminal 5 – Run Flow Allocator
+### 🧠 (Optional) Terminal 3 – Run Flow Allocator
 ```bash
 python3 main.py
 ```
