@@ -2,7 +2,9 @@ import os
 import csv
 import networkx as nx
 import requests
-
+import subprocess
+import signal
+import sys
 # ─────────────────────────────
 # Constants
 # ─────────────────────────────
@@ -13,6 +15,11 @@ BASE_TCP_PORT = 5001
 # ─────────────────────────────
 # Utility Functions
 # ─────────────────────────────
+def hard_kill(pid):
+    try:
+        subprocess.run(["pkill", "-TERM", "-P", str(pid)], check=False)
+    except Exception as e:
+        print(f"Failed to kill terminal PID {pid}: {e}")
 
 def load_graph_from_csv(path):
     G = nx.Graph()
@@ -101,7 +108,7 @@ def call_flow_api(command, path, tcp_port, rate, bidirectional=True):
 # Main Loop
 # ─────────────────────────────
 
-def interactive_loop():
+def interactive_loop(viz1, viz2):
     G = load_graph_from_csv(RUNNING_PATH)
     while True:
         print("\nOptions:")
@@ -203,13 +210,33 @@ def interactive_loop():
 
         elif choice == '3':
             print("Exiting.")
-            break
+            subprocess.run(["pkill", "-f", "visualize_initial_topology.py"], check=False)
+            subprocess.run(["pkill", "-f", "visualize_running_topology.py"], check=False)
+            sys.exit(0)
+
         else:
             print("Invalid option.")
 
 # ─────────────────────────────
 # Entry Point
 # ─────────────────────────────
-
 if __name__ == "__main__":
-    interactive_loop()
+    viz1 = subprocess.Popen(["gnome-terminal", "--", "bash", "-c", "python3 visualize_initial_topology.py"])
+    viz2 = subprocess.Popen(["gnome-terminal", "--", "bash", "-c", "python3 visualize_running_topology.py"])
+
+    def cleanup_and_exit(*_):
+        subprocess.run(["pkill", "-f", "visualize_initial_topology.py"], check=False)
+        subprocess.run(["pkill", "-f", "visualize_running_topology.py"], check=False)
+        sys.exit(0)
+
+    # Register signal handlers properly
+    signal.signal(signal.SIGINT, cleanup_and_exit)
+    signal.signal(signal.SIGTERM, cleanup_and_exit)
+
+    try:
+        interactive_loop(viz1, viz2)
+    finally:
+        # Use pkill here as well to clean up
+        subprocess.run(["pkill", "-f", "visualize_initial_topology.py"], check=False)
+        subprocess.run(["pkill", "-f", "visualize_running_topology.py"], check=False)
+
