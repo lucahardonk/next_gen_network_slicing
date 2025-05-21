@@ -286,20 +286,22 @@ def run():
         topo = CSVTopo()
 
     elif choice == '2':
-        print(f"\033[93m[INFO]\033[0m Generating random topology...")
+        print(f"\033[93m[INFO]\033[0m Generating dense random topology...")
+
         hosts = [f'h{i}' for i in range(1, 7)]
         switches = [f's{i}' for i in range(1, 7)]
         links = []
 
+        # Host-to-switch connections (1 host per switch)
         for h, s in zip(hosts, switches):
-            bw = random.choice([10, 50, 100])
+            bw = random.randint(10, 500)
             links.append((h, s, bw))
 
+        # Fully connect all switches (dense topology)
         for i in range(len(switches)):
             for j in range(i + 1, len(switches)):
-                if random.random() > 0.3:
-                    bw = random.choice([10, 50, 100])
-                    links.append((switches[i], switches[j], bw))
+                bw = random.randint(10, 500)
+                links.append((switches[i], switches[j], bw))
 
         # Save to running_network.csv
         with open(RUNNING_PATH, 'w') as f:
@@ -307,7 +309,8 @@ def run():
             for link in links:
                 writer.writerow(link)
 
-        class RandomTopo(Topo):
+        # Define Mininet Topology
+        class DenseRandomTopo(Topo):
             def build(self):
                 nodes = {}
                 for n1, n2, bw in links:
@@ -315,9 +318,10 @@ def run():
                         if n not in nodes:
                             nodes[n] = self.addHost(n) if n.startswith('h') else self.addSwitch(n)
                     self.addLink(nodes[n1], nodes[n2], cls=TCLink, bw=bw)
-                print(f"\033[92m[INFO]\033[0m Created {len(nodes)} nodes and {len(links)} links randomly.")
+                print(f"\033[92m[INFO]\033[0m Created {len(nodes)} nodes and {len(links)} links (fully connected switches).")
 
-        topo = RandomTopo()
+        topo = DenseRandomTopo()
+
 
     else:
         print("\033[93m[INFO]\033[0m Exiting.")
